@@ -1,4 +1,4 @@
-const CACHE = 'tig-preset-v4';
+const CACHE = 'tig-preset-v5';
 const ASSETS = ['./','./index.html','./manifest.webmanifest'];
 
 self.addEventListener('install', e => {
@@ -18,6 +18,7 @@ self.addEventListener('fetch', e => {
     }).catch(() => caches.match('./index.html')))
   );
 });
+
 
 
 
