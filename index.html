@@ -344,8 +344,10 @@
       const cup = autoCup;
       const tung = autoTung;
 
+            // Apply learning bias
       let amps = ampsRaw + bias;
 
+      // Tungsten limit
       const maxAForTung = limitForTungsten(tung);
       let note = "";
       if (amps > maxAForTung) {
@@ -353,28 +355,38 @@
         amps = maxAForTung;
       }
 
+      // Machine max
       if (amps > settings.maxA) {
         note += (note ? " " : "") + `Limited by machine max ${settings.maxA} A.`;
         amps = settings.maxA;
       }
 
+      // Gas lens recommendation (uses final cup)
+      const gasLensText = recommendGasLens(material, thk, joint, position, outdoors, cup);
+
+      // Suggested process mode (DC / AC / MIX TIG)
+      const mode = recommendMode(material, thk);
+
+      // Pre/Post-flow and slopes
       let preflow = 0.5;
       let postflow = Math.max(6, Math.round(amps / 10));
       let slopeUp = 0.3, slopeDown = 0.7;
       if (material === "Titanium") { postflow = Math.max(15, Math.round(amps / 6)); }
       if (material === "Aluminium") { preflow = 0.7; slopeUp = 0.4; slopeDown = 1.0; }
 
+      // AC and pulse
       let polarity = "DCEN", acBalance = "—", acFreq = "—", pulse = "Off";
       if (material === "Aluminium") {
         polarity = "AC";
         acBalance = thk <= 2 ? "72–75 (more cleaning)" : "68–72 (more penetration)";
-        acFreq = thk <= 2 ? "100–120 Hz (edge control)" : "60–80 Hz";
+        acFreq = recommendACFreq(thk, joint, position);
         if (thk <= 1.2) pulse = "1–2 Hz, peak 40%, back 30%, duty 45%";
       } else if (material === "Stainless") {
         pulse = thk <= 2 ? "1–2 Hz, peak 35–40%, back 30–35%, duty 40–50%" : "Off";
       } else if (material === "Mild steel") {
         pulse = thk <= 1.5 ? "1 Hz, peak 40%, back 30%, duty 40%" : "Off";
       }
+
 
       const pts = parseDutyPoints(settings.dutyPts);
       const d = interpDuty(amps, pts);
@@ -386,7 +398,9 @@
         note = (note ? note + " " : "") + "Use gas lens, trailing shield; back-purge closed volumes; post-flow ≥ 15 s.";
       }
 
-      const res = {
+            const res = {
+        mode,
+        gasLens: gasLensText,
         polarity,
         amps: `${amps} A`,
         acBalance,
@@ -401,6 +415,7 @@
         filler,
         notes: note || "Short arc length. Cleanliness first."
       };
+
       renderResult(res);
       _current.suggested = amps; _current.adjusted = amps; _current.key = key;
       const lp = document.getElementById('learn'); lp.textContent = `Learned: ${bias} A`;
@@ -409,12 +424,14 @@
 
     function renderResult(r) {
       const el = document.getElementById('result');
-      el.innerHTML = [
+            el.innerHTML = [
+        ['Mode', r.mode],
         ['Polarity', r.polarity],
         ['Current', r.amps],
         ['AC Balance (EN%)', r.acBalance],
         ['AC Frequency', r.acFreq],
         ['Pulse', r.pulse],
+        ['Gas lens', r.gasLens],
         ['Pre-flow', r.preflow],
         ['Post-flow', r.postflow],
         ['Slope up / down', r.slopes],
@@ -424,6 +441,7 @@
         ['Filler', r.filler],
         ['Notes', r.notes]
       ].map(([k,v])=>`<div><span class="k">${k}:</span> <span class="v">${v}</span></div>`).join('');
+
       document.getElementById('hint').textContent = 'Calculated';
       document.getElementById('hint').classList.add('ok');
     }
