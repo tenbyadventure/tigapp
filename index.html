@@ -230,41 +230,93 @@
       const base = (cup <= 6 ? 7 : cup <= 8 ? 9 : 11);
       return outdoors ? base + 3 : base;
     }
+        function recommendCup(material, thk, joint, position, outdoors) {
+      // Base by material
+      let base;
+      if (material === "Aluminium") base = 7;
+      else if (material === "Stainless") base = 6;
+      else if (material === "Titanium") base = 8;
+      else base = 6; // Mild steel / default
 
-    let _current = {suggested:0, adjusted:0, key:''};
+      // Thickness adjustment
+      if (thk < 1.5) base -= 1;
+      if (thk > 4) base += 1;
+
+      // Joint adjustment
+      if (joint === "Lap" || joint === "Outside corner") base += 1;
+      // Butt/Fillet: no change
+
+      // Indoors vs outdoors
+      if (outdoors) base += 1;
+
+      // Titanium: never below #8
+      if (material === "Titanium" && base < 8) base = 8;
+
+      // Clamp to sensible range
+      base = Math.max(4, Math.min(12, base));
+      return Math.round(base);
+    }
+
+    function recommendTungsten(material, amps) {
+      // Simple rule-of-thumb for 200A class machine
+      if (amps <= 80) return 1.6;
+      if (amps <= 180) return 2.4;
+      return 3.2;
+    }
+
+        let _current = {suggested:0, adjusted:0, key:''};
     function compute() {
       const material = document.getElementById('material').value;
       const thk = Number(document.getElementById('thickness').value);
       const joint = document.getElementById('joint').value;
       const position = document.getElementById('position').value;
       const outdoors = document.getElementById('outdoors').value === "Outdoors";
-      const cup = Number(document.getElementById('cup').value);
-      const tung = Number(document.getElementById('tungsten').value);
 
       const settings = loadSettings();
+
+      // Raw amps from rules, before tungsten/machine limits
       const base = baseAmpPerMm[material] || 35;
-      let amps = Math.round(base * thk * (jointFactor[joint] || 1) * (positionFactor[position] || 1));
+      const ampsRaw = Math.round(base * thk * (jointFactor[joint] || 1) * (positionFactor[position] || 1));
+
+      // Learning key and bias
       const key = keyFor(material, joint, position, thk);
       const bias = getLearnBias(key);
-      amps = amps + bias;
 
+      // Auto cup and tungsten suggestions
+      const autoCup = recommendCup(material, thk, joint, position, outdoors);
+      document.getElementById('cup').value = autoCup;
+
+      const autoTung = recommendTungsten(material, ampsRaw);
+      document.getElementById('tungsten').value = autoTung;
+
+      const cup = autoCup;
+      const tung = autoTung;
+
+      // Apply learning bias
+      let amps = ampsRaw + bias;
+
+      // Tungsten limit
       const maxAForTung = limitForTungsten(tung);
       let note = "";
       if (amps > maxAForTung) {
         note += `Amps limited by ${tung} mm tungsten. Consider ${tung === 1.6 ? "2.4" : "3.2"} mm.`;
         amps = maxAForTung;
       }
+
+      // Machine max
       if (amps > settings.maxA) {
-        note += (note? " " : "") + `Limited by machine max ${settings.maxA} A.`;
+        note += (note ? " " : "") + `Limited by machine max ${settings.maxA} A.`;
         amps = settings.maxA;
       }
 
+      // Pre/Post-flow and slopes
       let preflow = 0.5;
       let postflow = Math.max(6, Math.round(amps / 10));
       let slopeUp = 0.3, slopeDown = 0.7;
       if (material === "Titanium") { postflow = Math.max(15, Math.round(amps / 6)); }
       if (material === "Aluminium") { preflow = 0.7; slopeUp = 0.4; slopeDown = 1.0; }
 
+      // AC and pulse
       let polarity = "DCEN", acBalance = "—", acFreq = "—", pulse = "Off";
       if (material === "Aluminium") {
         polarity = "AC";
@@ -277,10 +329,12 @@
         pulse = thk <= 1.5 ? "1 Hz, peak 40%, back 30%, duty 40%" : "Off";
       }
 
+      // Duty cycle
       const pts = parseDutyPoints(settings.dutyPts);
       const d = interpDuty(amps, pts);
       const dutyStr = `${d.pct}% (~${(d.minutes).toFixed(1)} min per 10 min)`;
 
+      // Gas, filler, final notes
       const gas = gasFlow(cup, outdoors);
       const filler = suggestFiller(material, thk);
       if (material === "Titanium") {
@@ -307,6 +361,7 @@
       const lp = document.getElementById('learn'); lp.textContent = `Learned: ${bias} A`;
       return {input:{material,thk,joint,position,outdoors,cup,tung}, output:res, ts:Date.now()};
     }
+
 
     function renderResult(r) {
       const el = document.getElementById('result');
