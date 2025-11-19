@@ -1,1 +1,424 @@
-<html><body>TIG App</body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TIG Presets</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0f172a">
+  <style>
+    :root { --bg:#0b1020; --card:#111834; --text:#e5e7eb; --muted:#9ca3af; --accent:#22c55e; --border:#1f2a4a; }
+    *{box-sizing:border-box} body{margin:0;font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial;background:var(--bg);color:var(--text)}
+    header{padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg)}
+    h1{margin:0;font-size:20px}
+    main{max-width:900px;margin:0 auto;padding:20px;display:grid;gap:16px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:0 2px 12px rgba(0,0,0,.25)}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    select,input,button{width:100%;padding:12px;border-radius:12px;border:1px solid var(--border);background:#0c1430;color:var(--text)}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+    .out{font-family:ui-monospace, Menlo, monospace;background:#0a1128;border-radius:12px;padding:12px;border:1px solid var(--border)}
+    .k{color:var(--muted)} .v{color:#cbd5e1}
+    .actions{display:flex;gap:12px;flex-wrap:wrap}
+    .pill{display:inline-flex;gap:8px;align-items:center;padding:6px 10px;border:1px solid var(--border);border-radius:999px;background:#0c1430;font-size:12px;color:var(--muted)}
+    .ok{color:var(--accent)}
+    footer{color:var(--muted);font-size:12px;text-align:center;padding:20px}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>TIG Presets</h1>
+  </header>
+  <main>
+    <section class="card">
+      <div class="row">
+        <div>
+          <label for="material">Material</label>
+          <select id="material">
+            <option>Aluminium</option>
+            <option>Mild steel</option>
+            <option>Stainless</option>
+            <option>Titanium</option>
+          </select>
+        </div>
+        <div>
+          <label for="thickness">Thickness (mm)</label>
+          <input id="thickness" type="number" min="0.3" step="0.1" value="2.0">
+        </div>
+      </div>
+      <div class="row3" style="margin-top:12px">
+        <div>
+          <label for="joint">Joint</label>
+          <select id="joint">
+            <option>Butt</option>
+            <option>Fillet</option>
+            <option>Lap</option>
+            <option>Outside corner</option>
+          </select>
+        </div>
+        <div>
+          <label for="position">Position</label>
+          <select id="position">
+            <option>Flat</option>
+            <option>Horizontal</option>
+            <option>Vertical up</option>
+            <option>Overhead</option>
+          </select>
+        </div>
+        <div>
+          <label for="outdoors">Environment</label>
+          <select id="outdoors">
+            <option>Indoors</option>
+            <option>Outdoors</option>
+          </select>
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <div>
+          <label for="cup">Cup size (#)</label>
+          <input id="cup" type="number" min="4" step="1" value="8">
+        </div>
+        <div>
+          <label for="tungsten">Tungsten (mm)</label>
+          <select id="tungsten">
+            <option>1.6</option>
+            <option selected>2.4</option>
+            <option>3.2</option>
+          </select>
+        </div>
+      </div>
+      <div class="actions" style="margin-top:16px">
+        <button id="calc">Calculate</button>
+        <button id="minus5">-5 A</button>
+        <button id="plus5">+5 A</button>
+        <button id="good">Mark good</button>
+        <button id="save">Save as preset</button>
+        <span id="hint" class="pill">Ready</span>
+        <span id="learn" class="pill">Learned: 0 A</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="out" id="result">
+        <div><span class="k">Polarity:</span> <span class="v">—</span></div>
+        <div><span class="k">Current:</span> <span class="v">—</span></div>
+        <div><span class="k">AC Balance (EN%):</span> <span class="v">—</span></div>
+        <div><span class="k">AC Frequency:</span> <span class="v">—</span></div>
+        <div><span class="k">Pulse:</span> <span class="v">—</span></div>
+        <div><span class="k">Pre-flow:</span> <span class="v">—</span></div>
+        <div><span class="k">Post-flow:</span> <span class="v">—</span></div>
+        <div><span class="k">Slope up / down:</span> <span class="v">—</span></div>
+        <div><span class="k">Duty cycle @ amps:</span> <span class="v">—</span></div>
+        <div><span class="k">Gas flow:</span> <span class="v">—</span></div>
+        <div><span class="k">Tungsten:</span> <span class="v">—</span></div>
+        <div><span class="k">Filler:</span> <span class="v">—</span></div>
+        <div><span class="k">Notes:</span> <span class="v">—</span></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3 style="margin-top:0">Saved presets</h3>
+      <div id="presets"></div>
+    </section>
+
+    <section class="card">
+      <h3 style="margin-top:0">Settings & Data</h3>
+      <div class="row">
+        <div>
+          <label for="maxA">Machine max current (A)</label>
+          <input id="maxA" type="number" min="50" step="5" value="200">
+        </div>
+        <div>
+          <label for="dutyPts">Duty-cycle points A@% (comma separated)</label>
+          <input id="dutyPts" type="text" value="200@25, 160@40, 120@60, 80@100">
+        </div>
+      </div>
+      <div class="actions" style="margin-top:12px">
+        <button id="saveSettings">Save settings</button>
+        <button id="exportData">Export data</button>
+        <input id="importFile" type="file" accept="application/json" style="display:none">
+        <button id="importData">Import data</button>
+        <span id="settingsHint" class="pill">Defaults</span>
+      </div>
+    </section>
+
+    <footer>Install from your browser menu to add this app to your home screen. Works offline.</footer>
+  </main>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(console.error);
+    }
+
+    const baseAmpPerMm = {
+      "Mild steel": 38,
+      "Stainless": 32,
+      "Aluminium": 55,
+      "Titanium": 35
+    };
+    const jointFactor = { "Butt": 1.00, "Lap": 1.05, "Fillet": 1.10, "Outside corner": 0.90 };
+    const positionFactor = { "Flat": 1.00, "Horizontal": 1.00, "Vertical up": 0.85, "Overhead": 0.80 };
+    const tungstenLimit = [ { size: 1.6, maxA: 120 }, { size: 2.4, maxA: 220 }, { size: 3.2, maxA: 320 } ];
+
+    function keyFor(material, joint, position, thk) {
+      const t = Math.round(thk * 2) / 2;
+      return `${material}|${joint}|${position}|${t}`;
+    }
+    function getLearnBias(key) {
+      const raw = localStorage.getItem('tig-learn') || '{}';
+      const db = JSON.parse(raw);
+      const rec = db[key];
+      return rec ? Math.max(-30, Math.min(30, Math.round(rec.sumDelta / rec.n))) : 0;
+    }
+    function updateLearn(key, delta) {
+      const raw = localStorage.getItem('tig-learn') || '{}';
+      const db = JSON.parse(raw);
+      const rec = db[key] || { n: 0, sumDelta: 0 };
+      rec.n += 1;
+      rec.sumDelta += delta;
+      db[key] = rec;
+      localStorage.setItem('tig-learn', JSON.stringify(db));
+    }
+
+    function loadSettings(){
+      const raw = localStorage.getItem('tig-settings') || '{}';
+      const s = JSON.parse(raw);
+      if (s.maxA) document.getElementById('maxA').value = s.maxA;
+      if (s.dutyPts) document.getElementById('dutyPts').value = s.dutyPts;
+      return { maxA: Number(document.getElementById('maxA').value), dutyPts: document.getElementById('dutyPts').value };
+    }
+    function saveSettings(){
+      const s = { maxA: Number(document.getElementById('maxA').value), dutyPts: document.getElementById('dutyPts').value };
+      localStorage.setItem('tig-settings', JSON.stringify(s));
+      document.getElementById('settingsHint').textContent = 'Saved';
+      return s;
+    }
+    function parseDutyPoints(str){
+      const pts = str.split(',').map(s=>s.trim()).map(x=>{
+        const m = x.match(/(\d+(?:\.\d+)?)\s*@\s*(\d+(?:\.\d+)?)/);
+        if(!m) return null;
+        return {a: Number(m[1]), p: Number(m[2])};
+      }).filter(Boolean).sort((x,y)=>y.a - x.a);
+      return pts.length ? pts : [{a:200,p:25},{a:160,p:40},{a:120,p:60},{a:80,p:100}];
+    }
+    function interpDuty(amps, pts){
+      if(!pts.length) return {pct:100, minutes:10};
+      if (amps >= pts[0].a) return {pct: pts[0].p, minutes: 10 * pts[0].p/100};
+      if (amps <= pts[pts.length-1].a) return {pct: pts[pts.length-1].p, minutes: 10 * pts[pts.length-1].p/100};
+      for(let i=0;i<pts.length-1;i++){
+        const hi = pts[i], lo = pts[i+1];
+        if (amps <= hi.a && amps >= lo.a){
+          const t = (amps - lo.a) / (hi.a - lo.a);
+          const p = lo.p + t * (hi.p - lo.p);
+          return {pct: Math.round(p), minutes: Math.round(10 * p)/100*10};
+        }
+      }
+      return {pct:100, minutes:10};
+    }
+
+    function limitForTungsten(size) {
+      const row = tungstenLimit.find(r => r.size === Number(size)) || tungstenLimit[1];
+      return row.maxA;
+    }
+    function suggestFiller(material, thk) {
+      if (material === "Aluminium") return thk <= 2 ? "ER4043 1.2 mm" : "ER5356 1.6–2.0 mm";
+      if (material === "Stainless") return thk <= 2 ? "ER308L 1.0 mm" : "ER308L 1.6 mm";
+      if (material === "Titanium") return thk <= 1.5 ? "ERTi-2 1.0 mm" : "ERTi-2 1.6 mm";
+      return thk <= 2 ? "ER70S-2 1.0 mm" : "ER70S-2 1.6 mm";
+    }
+    function gasFlow(cup, outdoors) {
+      const base = (cup <= 6 ? 7 : cup <= 8 ? 9 : 11);
+      return outdoors ? base + 3 : base;
+    }
+
+    let _current = {suggested:0, adjusted:0, key:''};
+    function compute() {
+      const material = document.getElementById('material').value;
+      const thk = Number(document.getElementById('thickness').value);
+      const joint = document.getElementById('joint').value;
+      const position = document.getElementById('position').value;
+      const outdoors = document.getElementById('outdoors').value === "Outdoors";
+      const cup = Number(document.getElementById('cup').value);
+      const tung = Number(document.getElementById('tungsten').value);
+
+      const settings = loadSettings();
+      const base = baseAmpPerMm[material] || 35;
+      let amps = Math.round(base * thk * (jointFactor[joint] || 1) * (positionFactor[position] || 1));
+      const key = keyFor(material, joint, position, thk);
+      const bias = getLearnBias(key);
+      amps = amps + bias;
+
+      const maxAForTung = limitForTungsten(tung);
+      let note = "";
+      if (amps > maxAForTung) {
+        note += `Amps limited by ${tung} mm tungsten. Consider ${tung === 1.6 ? "2.4" : "3.2"} mm.`;
+        amps = maxAForTung;
+      }
+      if (amps > settings.maxA) {
+        note += (note? " " : "") + `Limited by machine max ${settings.maxA} A.`;
+        amps = settings.maxA;
+      }
+
+      let preflow = 0.5;
+      let postflow = Math.max(6, Math.round(amps / 10));
+      let slopeUp = 0.3, slopeDown = 0.7;
+      if (material === "Titanium") { postflow = Math.max(15, Math.round(amps / 6)); }
+      if (material === "Aluminium") { preflow = 0.7; slopeUp = 0.4; slopeDown = 1.0; }
+
+      let polarity = "DCEN", acBalance = "—", acFreq = "—", pulse = "Off";
+      if (material === "Aluminium") {
+        polarity = "AC";
+        acBalance = thk <= 2 ? "72–75 (more cleaning)" : "68–72 (more penetration)";
+        acFreq = thk <= 2 ? "100–120 Hz (edge control)" : "60–80 Hz";
+        if (thk <= 1.2) pulse = "1–2 Hz, peak 40%, back 30%, duty 45%";
+      } else if (material === "Stainless") {
+        pulse = thk <= 2 ? "1–2 Hz, peak 35–40%, back 30–35%, duty 40–50%" : "Off";
+      } else if (material === "Mild steel") {
+        pulse = thk <= 1.5 ? "1 Hz, peak 40%, back 30%, duty 40%" : "Off";
+      }
+
+      const pts = parseDutyPoints(settings.dutyPts);
+      const d = interpDuty(amps, pts);
+      const dutyStr = `${d.pct}% (~${(d.minutes).toFixed(1)} min per 10 min)`;
+
+      const gas = gasFlow(cup, outdoors);
+      const filler = suggestFiller(material, thk);
+      if (material === "Titanium") {
+        note = (note ? note + " " : "") + "Use gas lens, trailing shield; back-purge closed volumes; post-flow ≥ 15 s.";
+      }
+
+      const res = {
+        polarity,
+        amps: `${amps} A`,
+        acBalance,
+        acFreq,
+        pulse,
+        preflow: `${preflow.toFixed(1)} s`,
+        postflow: `${postflow} s`,
+        slopes: `${slopeUp.toFixed(1)} s / ${slopeDown.toFixed(1)} s`,
+        duty: dutyStr,
+        gas: `${gas} L/min`,
+        tungsten: `${tung} mm, 2% lanthanated`,
+        filler,
+        notes: note || "Short arc length. Cleanliness first."
+      };
+      renderResult(res);
+      _current.suggested = amps; _current.adjusted = amps; _current.key = key;
+      const lp = document.getElementById('learn'); lp.textContent = `Learned: ${bias} A`;
+      return {input:{material,thk,joint,position,outdoors,cup,tung}, output:res, ts:Date.now()};
+    }
+
+    function renderResult(r) {
+      const el = document.getElementById('result');
+      el.innerHTML = [
+        ['Polarity', r.polarity],
+        ['Current', r.amps],
+        ['AC Balance (EN%)', r.acBalance],
+        ['AC Frequency', r.acFreq],
+        ['Pulse', r.pulse],
+        ['Pre-flow', r.preflow],
+        ['Post-flow', r.postflow],
+        ['Slope up / down', r.slopes],
+        ['Duty cycle @ amps', r.duty],
+        ['Gas flow', r.gas],
+        ['Tungsten', r.tungsten],
+        ['Filler', r.filler],
+        ['Notes', r.notes]
+      ].map(([k,v])=>`<div><span class="k">${k}:</span> <span class="v">${v}</span></div>`).join('');
+      document.getElementById('hint').textContent = 'Calculated';
+      document.getElementById('hint').classList.add('ok');
+    }
+
+    function loadPresets() {
+      const raw = localStorage.getItem('tig-presets') || '[]';
+      const list = JSON.parse(raw);
+      const wrap = document.getElementById('presets');
+      if (!list.length) { wrap.innerHTML = '<div class="pill">No presets saved</div>'; return; }
+      wrap.innerHTML = '';
+      list.slice().reverse().forEach((p) => {
+        const div = document.createElement('div');
+        div.className = 'pill';
+        const r = p.output, i = p.input;
+        div.innerHTML = `${i.material} ${i.thk}mm ${i.joint} • ${r.amps} • ${r.polarity} • ${r.gas}`;
+        div.title = new Date(p.ts).toLocaleString();
+        div.onclick = () => {
+          document.getElementById('material').value = i.material;
+          document.getElementById('thickness').value = i.thk;
+          document.getElementById('joint').value = i.joint;
+          document.getElementById('position').value = i.position;
+          document.getElementById('outdoors').value = i.outdoors ? "Outdoors" : "Indoors";
+          document.getElementById('cup').value = i.cup;
+          document.getElementById('tungsten').value = i.tung;
+          renderResult(r);
+        };
+        wrap.appendChild(div);
+      });
+    }
+
+    function exportData(){
+      const data = {
+        presets: JSON.parse(localStorage.getItem('tig-presets') || '[]'),
+        learn: JSON.parse(localStorage.getItem('tig-learn') || '{}'),
+        settings: JSON.parse(localStorage.getItem('tig-settings') || '{}')
+      };
+      const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'tig-preset-data.json'; a.click();
+      URL.revokeObjectURL(url);
+    }
+    function importData(file){
+      const r = new FileReader();
+      r.onload = () => {
+        try {
+          const data = JSON.parse(r.result);
+          if (data.presets) localStorage.setItem('tig-presets', JSON.stringify(data.presets));
+          if (data.learn) localStorage.setItem('tig-learn', JSON.stringify(data.learn));
+          if (data.settings) localStorage.setItem('tig-settings', JSON.stringify(data.settings));
+          document.getElementById('settingsHint').textContent = 'Imported';
+          loadPresets(); loadSettings(); compute();
+        } catch(e){ alert('Invalid JSON'); }
+      };
+      r.readAsText(file);
+    }
+
+    function setDisplayedAmps(val){
+      const el = document.getElementById('result');
+      const rows = el.querySelectorAll('div');
+      rows.forEach(r => {
+        if (r.textContent.trim().startsWith('Polarity:')) return;
+      });
+      const currentRow = el.querySelectorAll('div')[1];
+      const v = currentRow.querySelector('.v');
+      if (v) v.textContent = `${val} A`;
+    }
+
+    document.getElementById('calc').addEventListener('click', compute);
+    document.getElementById('minus5').addEventListener('click', () => { _current.adjusted = Math.max(0, _current.adjusted - 5); setDisplayedAmps(_current.adjusted); document.getElementById('hint').textContent = '-5 A'; });
+    document.getElementById('plus5').addEventListener('click', () => { _current.adjusted = _current.adjusted + 5; setDisplayedAmps(_current.adjusted); document.getElementById('hint').textContent = '+5 A'; });
+    document.getElementById('good').addEventListener('click', () => {
+      const delta = _current.adjusted - _current.suggested;
+      updateLearn(_current.key, delta);
+      document.getElementById('hint').textContent = `Learned ${delta >=0? '+':''}${delta} A`;
+      compute();
+    });
+    document.getElementById('save').addEventListener('click', () => {
+      const rec = compute();
+      const raw = localStorage.getItem('tig-presets') || '[]';
+      const list = JSON.parse(raw);
+      list.push(rec);
+      localStorage.setItem('tig-presets', JSON.stringify(list));
+      document.getElementById('hint').textContent = 'Saved';
+      loadPresets();
+    });
+    document.getElementById('saveSettings').addEventListener('click', () => { saveSettings(); compute(); });
+    document.getElementById('exportData').addEventListener('click', exportData);
+    document.getElementById('importData').addEventListener('click', () => document.getElementById('importFile').click());
+    document.getElementById('importFile').addEventListener('change', (e) => { const f = e.target.files[0]; if (f) importData(f); });
+
+    loadPresets();
+    loadSettings();
+    compute();
+  </script>
+</body>
+</html>
