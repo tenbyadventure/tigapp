@@ -202,19 +202,20 @@
       return pts.length ? pts : [{a:200,p:25},{a:160,p:40},{a:120,p:60},{a:80,p:100}];
     }
     function interpDuty(amps, pts){
-      if(!pts.length) return {pct:100, minutes:10};
-      if (amps >= pts[0].a) return {pct: pts[0].p, minutes: 10 * pts[0].p/100};
-      if (amps <= pts[pts.length-1].a) return {pct: pts[pts.length-1].p, minutes: 10 * pts[pts.length-1].p/100};
-      for(let i=0;i<pts.length-1;i++){
-        const hi = pts[i], lo = pts[i+1];
-        if (amps <= hi.a && amps >= lo.a){
-          const t = (amps - lo.a) / (hi.a - lo.a);
-          const p = lo.p + t * (hi.p - lo.p);
-          return {pct: Math.round(p), minutes: Math.round(10 * p)/100*10};
-        }
-      }
-      return {pct:100, minutes:10};
+  if(!pts.length) return {pct:100, minutes:10};
+  if (amps >= pts[0].a) return {pct: pts[0].p, minutes: 10 * pts[0].p / 100};
+  if (amps <= pts[pts.length-1].a) return {pct: pts[pts.length-1].p, minutes: 10 * pts[pts.length-1].p / 100};
+  for(let i=0;i<pts.length-1;i++){
+    const hi = pts[i], lo = pts[i+1];
+    if (amps <= hi.a && amps >= lo.a){
+      const t = (amps - lo.a) / (hi.a - lo.a);
+      const p = lo.p + t * (hi.p - lo.p);
+      return {pct: Math.round(p), minutes: 10 * p / 100};
     }
+  }
+  return {pct:100, minutes:10};
+}
+
 
     function limitForTungsten(size) {
       const row = tungstenLimit.find(r => r.size === Number(size)) || tungstenLimit[1];
