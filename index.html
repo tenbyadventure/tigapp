@@ -256,6 +256,67 @@
       if (amps <= 180) return 2.4;
       return 3.2;
     }
+        function recommendGasLens(material, thk, joint, position, outdoors, cup) {
+      let use = false;
+
+      // Titanium: always
+      if (material === "Titanium") use = true;
+
+      // Stainless: larger cups, thicker, non-flat, or outdoors
+      if (material === "Stainless" && (thk > 2 || cup >= 8 || position !== "Flat" || outdoors)) {
+        use = true;
+      }
+
+      // Aluminium: big cup or outdoors or non-flat
+      if (material === "Aluminium" && (cup >= 8 || outdoors || position !== "Flat")) {
+        use = true;
+      }
+
+      // Outside corners like extra shielding
+      if (joint === "Outside corner") use = true;
+
+      if (!use) return "Not essential (standard cup OK)";
+
+      if (material === "Titanium") return "Yes – gas lens + trailing shield strongly recommended";
+      if (material === "Stainless") return "Yes – gas lens recommended for cleaner shielding";
+      if (material === "Aluminium") return "Yes – gas lens helpful for arc stability";
+
+      return "Yes – gas lens recommended";
+    }
+
+    function recommendACFreq(thk, joint, position) {
+      // Base band by thickness
+      let band;
+      if (thk < 1.5) band = "120–150 Hz";      // very thin, tight arc
+      else if (thk < 3) band = "100–120 Hz";
+      else if (thk < 6) band = "80–100 Hz";
+      else band = "60–80 Hz";                  // heavy sections
+
+      // Outside corners / awkward positions: bump one band up if possible
+      const needsTighter = (joint === "Outside corner" ||
+                            position === "Vertical up" ||
+                            position === "Overhead");
+
+      if (needsTighter) {
+        if (band === "60–80 Hz") band = "80–100 Hz";
+        else if (band === "80–100 Hz") band = "100–120 Hz";
+        else if (band === "100–120 Hz") band = "120–150 Hz";
+      }
+
+      return band;
+    }
+
+    function recommendMode(material, thk) {
+      if (material === "Aluminium") {
+        if (thk >= 4) return "AC TIG or MIX TIG for extra penetration";
+        return "AC TIG";
+      }
+      if (material === "Titanium" || material === "Stainless" || material === "Mild steel") {
+        return "DCEN TIG";
+      }
+      return "TIG";
+    }
+
 
     let _current = {suggested:0, adjusted:0, key:''};
 
