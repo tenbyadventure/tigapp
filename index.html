@@ -100,18 +100,21 @@
 
     <section class="card">
       <div class="out" id="result">
+        <div><span class="k">Mode:</span> <span class="v">—</span></div>
         <div><span class="k">Polarity:</span> <span class="v">—</span></div>
+        <div><span class="k">Waveform:</span> <span class="v">—</span></div>
         <div><span class="k">Current:</span> <span class="v">—</span></div>
         <div><span class="k">AC Balance (EN%):</span> <span class="v">—</span></div>
         <div><span class="k">AC Frequency:</span> <span class="v">—</span></div>
         <div><span class="k">Pulse:</span> <span class="v">—</span></div>
-        <div><span class="k">Pre-flow:</span> <span class="v">—</span></div>
-        <div><span class="k">Post-flow:</span> <span class="v">—</span></div>
-        <div><span class="k">Slope up / down:</span> <span class="v">—</span></div>
+        <div><span class="k">Gas lens:</span> <span class="v">—</span></div>
+        <div><span class="k">Arc length:</span> <span class="v">—</span></div>
+        <div><span class="k">Travel speed:</span> <span class="v">—</span></div>
         <div><span class="k">Duty cycle @ amps:</span> <span class="v">—</span></div>
         <div><span class="k">Gas flow:</span> <span class="v">—</span></div>
         <div><span class="k">Tungsten:</span> <span class="v">—</span></div>
         <div><span class="k">Filler:</span> <span class="v">—</span></div>
+        <div><span class="k">Surface prep:</span> <span class="v">—</span></div>
         <div><span class="k">Notes:</span> <span class="v">—</span></div>
       </div>
     </section>
@@ -139,6 +142,23 @@
         <input id="importFile" type="file" accept="application/json" style="display:none">
         <button id="importData">Import data</button>
         <span id="settingsHint" class="pill">Defaults</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3 style="margin-top:0">Parameter help</h3>
+      <button id="toggleHelp">Show / hide help</button>
+      <div id="help" style="margin-top:12px; display:none; font-size:13px; color:var(--muted); line-height:1.4;">
+        <p><strong>Mode</strong>: Recommends DCEN TIG for steels and titanium, AC TIG for aluminium, and suggests using MIX TIG on thicker aluminium if your machine has it.</p>
+        <p><strong>Polarity</strong>: DCEN (electrode negative) for steels and titanium. AC for aluminium.</p>
+        <p><strong>Waveform</strong>: For AC, square wave for general use and penetration, softer/sinusoidal for thin edges. N/A for DC.</p>
+        <p><strong>AC Balance</strong>: Higher EN% = more penetration, less cleaning; lower EN% = more cleaning, less penetration.</p>
+        <p><strong>AC Frequency</strong>: Higher Hz tightens the arc (better for thin or outside corners), lower Hz gives a softer, wider puddle (ok for thicker sections).</p>
+        <p><strong>Pulse</strong>: Low frequency (1–2 Hz) helps control heat on thin material and vertical welds; off or low settings for thicker plate.</p>
+        <p><strong>Gas lens</strong>: Recommended for titanium, stainless, outside corners, large cups, non-flat positions, or outdoors for more stable shielding gas.</p>
+        <p><strong>Arc length</strong>: Try to keep the arc about 1× tungsten diameter long. Longer arcs increase heat input and instability.</p>
+        <p><strong>Travel speed</strong>: Faster on thin material to avoid burn-through, slower on thicker material to allow penetration.</p>
+        <p><strong>Duty cycle</strong>: Approximate safe “on-time” at a given current for a 10-minute interval.</p>
       </div>
     </section>
 
@@ -202,31 +222,69 @@
       return pts.length ? pts : [{a:200,p:25},{a:160,p:40},{a:120,p:60},{a:80,p:100}];
     }
     function interpDuty(amps, pts){
-  if(!pts.length) return {pct:100, minutes:10};
-  if (amps >= pts[0].a) return {pct: pts[0].p, minutes: 10 * pts[0].p / 100};
-  if (amps <= pts[pts.length-1].a) return {pct: pts[pts.length-1].p, minutes: 10 * pts[pts.length-1].p / 100};
-  for(let i=0;i<pts.length-1;i++){
-    const hi = pts[i], lo = pts[i+1];
-    if (amps <= hi.a && amps >= lo.a){
-      const t = (amps - lo.a) / (hi.a - lo.a);
-      const p = lo.p + t * (hi.p - lo.p);
-      return {pct: Math.round(p), minutes: 10 * p / 100};
+      if(!pts.length) return {pct:100, minutes:10};
+      if (amps >= pts[0].a) return {pct: pts[0].p, minutes: 10 * pts[0].p / 100};
+      if (amps <= pts[pts.length-1].a) return {pct: pts[pts.length-1].p, minutes: 10 * pts[pts.length-1].p / 100};
+      for(let i=0;i<pts.length-1;i++){
+        const hi = pts[i], lo = pts[i+1];
+        if (amps <= hi.a && amps >= lo.a){
+          const t = (amps - lo.a) / (hi.a - lo.a);
+          const p = lo.p + t * (hi.p - lo.p);
+          return {pct: Math.round(p), minutes: 10 * p / 100};
+        }
+      }
+      return {pct:100, minutes:10};
     }
-  }
-  return {pct:100, minutes:10};
-}
-
 
     function limitForTungsten(size) {
       const row = tungstenLimit.find(r => r.size === Number(size)) || tungstenLimit[1];
       return row.maxA;
     }
-    function suggestFiller(material, thk) {
-      if (material === "Aluminium") return thk <= 2 ? "ER4043 1.2 mm" : "ER5356 1.6–2.0 mm";
-      if (material === "Stainless") return thk <= 2 ? "ER308L 1.0 mm" : "ER308L 1.6 mm";
-      if (material === "Titanium") return thk <= 1.5 ? "ERTi-2 1.0 mm" : "ERTi-2 1.6 mm";
-      return thk <= 2 ? "ER70S-2 1.0 mm" : "ER70S-2 1.6 mm";
+
+    function suggestFiller(material, thk, position) {
+      const verticalOrOverhead = (position === "Vertical up" || position === "Overhead");
+
+      function adjustDiam(main, small) {
+        return verticalOrOverhead ? small : main;
+      }
+
+      if (material === "Aluminium") {
+        if (thk <= 2) {
+          const d = adjustDiam("1.2 mm", "1.0–1.2 mm");
+          return `ER4043 ${d}`;
+        } else {
+          const d = adjustDiam("1.6–2.0 mm", "1.2–1.6 mm");
+          return `ER5356 ${d}`;
+        }
+      }
+      if (material === "Stainless") {
+        if (thk <= 2) {
+          const d = adjustDiam("1.0 mm", "0.8–1.0 mm");
+          return `ER308L ${d}`;
+        } else {
+          const d = adjustDiam("1.6 mm", "1.0–1.2 mm");
+          return `ER308L ${d}`;
+        }
+      }
+      if (material === "Titanium") {
+        if (thk <= 1.5) {
+          const d = adjustDiam("1.0 mm", "0.8–1.0 mm");
+          return `ERTi-2 ${d}`;
+        } else {
+          const d = adjustDiam("1.6 mm", "1.0–1.2 mm`);
+          return `ERTi-2 ${d}`;
+        }
+      }
+      // Mild steel / default
+      if (thk <= 2) {
+        const d = adjustDiam("1.0 mm", "0.8–1.0 mm");
+        return `ER70S-2 ${d}`;
+      } else {
+        const d = adjustDiam("1.6 mm", "1.0–1.2 mm");
+        return `ER70S-2 ${d}`;
+      }
     }
+
     function gasFlow(cup, outdoors) {
       const base = (cup <= 6 ? 7 : cup <= 8 ? 9 : 11);
       return outdoors ? base + 3 : base;
@@ -257,23 +315,20 @@
       if (amps <= 180) return 2.4;
       return 3.2;
     }
-        function recommendGasLens(material, thk, joint, position, outdoors, cup) {
+
+    function recommendGasLens(material, thk, joint, position, outdoors, cup) {
       let use = false;
 
-      // Titanium: always
       if (material === "Titanium") use = true;
 
-      // Stainless: larger cups, thicker, non-flat, or outdoors
       if (material === "Stainless" && (thk > 2 || cup >= 8 || position !== "Flat" || outdoors)) {
         use = true;
       }
 
-      // Aluminium: big cup or outdoors or non-flat
       if (material === "Aluminium" && (cup >= 8 || outdoors || position !== "Flat")) {
         use = true;
       }
 
-      // Outside corners like extra shielding
       if (joint === "Outside corner") use = true;
 
       if (!use) return "Not essential (standard cup OK)";
@@ -286,14 +341,12 @@
     }
 
     function recommendACFreq(thk, joint, position) {
-      // Base band by thickness
       let band;
-      if (thk < 1.5) band = "120–150 Hz";      // very thin, tight arc
+      if (thk < 1.5) band = "120–150 Hz";
       else if (thk < 3) band = "100–120 Hz";
       else if (thk < 6) band = "80–100 Hz";
-      else band = "60–80 Hz";                  // heavy sections
+      else band = "60–80 Hz";
 
-      // Outside corners / awkward positions: bump one band up if possible
       const needsTighter = (joint === "Outside corner" ||
                             position === "Vertical up" ||
                             position === "Overhead");
@@ -309,7 +362,7 @@
 
     function recommendMode(material, thk) {
       if (material === "Aluminium") {
-        if (thk >= 4) return "AC TIG or MIX TIG for extra penetration";
+        if (thk >= 4) return "AC TIG or MIX TIG (for extra penetration if available)";
         return "AC TIG";
       }
       if (material === "Titanium" || material === "Stainless" || material === "Mild steel") {
@@ -318,6 +371,61 @@
       return "TIG";
     }
 
+    function recommendWaveform(material, thk, joint, position) {
+      if (material !== "Aluminium") return "N/A (DC)";
+
+      let wf = "AC square";
+      if (thk < 1.5) wf = "AC soft/sine (smoother arc)";
+      if (thk > 5) wf = "AC square (penetration)";
+
+      const tricky = (joint === "Outside corner" || position === "Vertical up" || position === "Overhead");
+      if (tricky && thk <= 3) wf = "AC soft/sine for smoother control";
+
+      return wf;
+    }
+
+    function recommendArcLength(material, tung) {
+      const diam = tung;
+      const nominal = diam;
+      const max = (material === "Aluminium") ? diam * 1.5 : diam * 1.2;
+      const nomStr = nominal.toFixed(1);
+      const maxStr = max.toFixed(1);
+      if (material === "Aluminium") {
+        return `Aim for ~${nomStr} mm (≈1× dia), keep under ~${maxStr} mm; slightly longer arc is tolerated on AC.`;
+      }
+      return `Aim for ~${nomStr} mm (≈1× dia), keep under ~${maxStr} mm for stable DC arc.`;
+    }
+
+    function recommendSurfacePrep(material) {
+      if (material === "Aluminium") {
+        return "Degrease (acetone), stainless brush only for aluminium, remove oxide immediately before welding.";
+      }
+      if (material === "Stainless") {
+        return "Degrease, grind or flap-disc with stainless-only abrasives; no carbon-steel contamination.";
+      }
+      if (material === "Titanium") {
+        return "Bright metal, thoroughly degreased, handle with clean gloves; avoid fingerprints and contamination.";
+      }
+      return "Grind to bright metal, remove mill scale and rust; degrease joint area.";
+    }
+
+    function recommendTravelSpeed(material, thk, position, amps) {
+      const thin = thk < 1.5;
+      const mid = thk >= 1.5 && thk <= 3;
+      const vert = (position === "Vertical up" || position === "Overhead");
+
+      if (thin) {
+        if (vert) return "Fast, controlled travel; keep the pool small to avoid burn-through.";
+        return "Fairly fast stringer beads; avoid dwelling to prevent burn-through.";
+      }
+      if (mid) {
+        if (vert) return "Moderate uphill rate; small weaves or tight triangles for control.";
+        return "Steady, moderate travel; watch for consistent bead width and keyhole.";
+      }
+      // thick
+      if (vert) return "Slow, deliberate travel with possible weave; allow puddle to key into the root.";
+      return "Slower travel or multi-pass; allow heat to build for full penetration.";
+    }
 
     let _current = {suggested:0, adjusted:0, key:''};
 
@@ -345,10 +453,8 @@
       const cup = autoCup;
       const tung = autoTung;
 
-            // Apply learning bias
       let amps = ampsRaw + bias;
 
-      // Tungsten limit
       const maxAForTung = limitForTungsten(tung);
       let note = "";
       if (amps > maxAForTung) {
@@ -356,26 +462,24 @@
         amps = maxAForTung;
       }
 
-      // Machine max
       if (amps > settings.maxA) {
         note += (note ? " " : "") + `Limited by machine max ${settings.maxA} A.`;
         amps = settings.maxA;
       }
 
-      // Gas lens recommendation (uses final cup)
       const gasLensText = recommendGasLens(material, thk, joint, position, outdoors, cup);
-
-      // Suggested process mode (DC / AC / MIX TIG)
       const mode = recommendMode(material, thk);
+      const waveform = recommendWaveform(material, thk, joint, position);
+      const arcLength = recommendArcLength(material, tung);
+      const surfacePrep = recommendSurfacePrep(material);
+      const travel = recommendTravelSpeed(material, thk, position, amps);
 
-      // Pre/Post-flow and slopes
       let preflow = 0.5;
       let postflow = Math.max(6, Math.round(amps / 10));
       let slopeUp = 0.3, slopeDown = 0.7;
       if (material === "Titanium") { postflow = Math.max(15, Math.round(amps / 6)); }
       if (material === "Aluminium") { preflow = 0.7; slopeUp = 0.4; slopeDown = 1.0; }
 
-      // AC and pulse
       let polarity = "DCEN", acBalance = "—", acFreq = "—", pulse = "Off";
       if (material === "Aluminium") {
         polarity = "AC";
@@ -388,25 +492,27 @@
         pulse = thk <= 1.5 ? "1 Hz, peak 40%, back 30%, duty 40%" : "Off";
       }
 
-
       const pts = parseDutyPoints(settings.dutyPts);
       const d = interpDuty(amps, pts);
-      const dutyStr = `${d.pct}% (~${(d.minutes).toFixed(1)} min per 10 min)`;
+      const dutyStr = `${d.pct}% (~${d.minutes.toFixed(1)} min per 10 min)`;
 
       const gas = gasFlow(cup, outdoors);
-      const filler = suggestFiller(material, thk);
+      const filler = suggestFiller(material, thk, position);
       if (material === "Titanium") {
         note = (note ? note + " " : "") + "Use gas lens, trailing shield; back-purge closed volumes; post-flow ≥ 15 s.";
       }
 
-            const res = {
+      const res = {
         mode,
         gasLens: gasLensText,
         polarity,
+        waveform,
         amps: `${amps} A`,
         acBalance,
         acFreq,
         pulse,
+        arcLength,
+        travel,
         preflow: `${preflow.toFixed(1)} s`,
         postflow: `${postflow} s`,
         slopes: `${slopeUp.toFixed(1)} s / ${slopeDown.toFixed(1)} s`,
@@ -414,7 +520,8 @@
         gas: `${gas} L/min`,
         tungsten: `${tung} mm, 2% lanthanated`,
         filler,
-        notes: note || "Short arc length. Cleanliness first."
+        surfacePrep,
+        notes: note || "Keep arc short, watch puddle wetting and adjust travel accordingly."
       };
 
       renderResult(res);
@@ -425,24 +532,24 @@
 
     function renderResult(r) {
       const el = document.getElementById('result');
-            el.innerHTML = [
+      el.innerHTML = [
         ['Mode', r.mode],
         ['Polarity', r.polarity],
+        ['Waveform', r.waveform],
         ['Current', r.amps],
         ['AC Balance (EN%)', r.acBalance],
         ['AC Frequency', r.acFreq],
         ['Pulse', r.pulse],
         ['Gas lens', r.gasLens],
-        ['Pre-flow', r.preflow],
-        ['Post-flow', r.postflow],
-        ['Slope up / down', r.slopes],
+        ['Arc length', r.arcLength],
+        ['Travel speed', r.travel],
         ['Duty cycle @ amps', r.duty],
         ['Gas flow', r.gas],
         ['Tungsten', r.tungsten],
         ['Filler', r.filler],
+        ['Surface prep', r.surfacePrep],
         ['Notes', r.notes]
       ].map(([k,v])=>`<div><span class="k">${k}:</span> <span class="v">${v}</span></div>`).join('');
-
       document.getElementById('hint').textContent = 'Calculated';
       document.getElementById('hint').classList.add('ok');
     }
@@ -503,8 +610,9 @@
     function setDisplayedAmps(val){
       const el = document.getElementById('result');
       const rows = el.querySelectorAll('div');
-      if (rows.length > 1) {
-        const v = rows[1].querySelector('.v');
+      // Current is now row index 3 (0: Mode, 1: Polarity, 2: Waveform, 3: Current)
+      if (rows.length > 3) {
+        const v = rows[3].querySelector('.v');
         if (v) v.textContent = `${val} A`;
       }
     }
@@ -531,6 +639,12 @@
     document.getElementById('exportData').addEventListener('click', exportData);
     document.getElementById('importData').addEventListener('click', () => document.getElementById('importFile').click());
     document.getElementById('importFile').addEventListener('change', (e) => { const f = e.target.files[0]; if (f) importData(f); });
+
+    document.getElementById('toggleHelp').addEventListener('click', () => {
+      const h = document.getElementById('help');
+      const visible = h.style.display !== 'none';
+      h.style.display = visible ? 'none' : 'block';
+    });
 
     loadPresets();
     loadSettings();
