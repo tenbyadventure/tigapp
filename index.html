@@ -241,7 +241,7 @@
       return row.maxA;
     }
 
-    function suggestFiller(material, thk, position) {
+        function suggestFiller(material, thk, position) {
       const verticalOrOverhead = (position === "Vertical up" || position === "Overhead");
 
       function adjustDiam(main, small) {
@@ -251,39 +251,43 @@
       if (material === "Aluminium") {
         if (thk <= 2) {
           const d = adjustDiam("1.2 mm", "1.0–1.2 mm");
-          return `ER4043 ${d}`;
+          return "ER4043 " + d;
         } else {
           const d = adjustDiam("1.6–2.0 mm", "1.2–1.6 mm");
-          return `ER5356 ${d}`;
+          return "ER5356 " + d;
         }
       }
+
       if (material === "Stainless") {
         if (thk <= 2) {
           const d = adjustDiam("1.0 mm", "0.8–1.0 mm");
-          return `ER308L ${d}`;
+          return "ER308L " + d;
         } else {
           const d = adjustDiam("1.6 mm", "1.0–1.2 mm");
-          return `ER308L ${d}`;
+          return "ER308L " + d;
         }
       }
+
       if (material === "Titanium") {
         if (thk <= 1.5) {
           const d = adjustDiam("1.0 mm", "0.8–1.0 mm");
-          return `ERTi-2 ${d}`;
+          return "ERTi-2 " + d;
         } else {
-          const d = adjustDiam("1.6 mm", "1.0–1.2 mm`);
-          return `ERTi-2 ${d}`;
+          const d = adjustDiam("1.6 mm", "1.0–1.2 mm");
+          return "ERTi-2 " + d;
         }
       }
+
       // Mild steel / default
       if (thk <= 2) {
         const d = adjustDiam("1.0 mm", "0.8–1.0 mm");
-        return `ER70S-2 ${d}`;
+        return "ER70S-2 " + d;
       } else {
         const d = adjustDiam("1.6 mm", "1.0–1.2 mm");
-        return `ER70S-2 ${d}`;
+        return "ER70S-2 " + d;
       }
     }
+
 
     function gasFlow(cup, outdoors) {
       const base = (cup <= 6 ? 7 : cup <= 8 ? 9 : 11);
