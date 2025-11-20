@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>TIG Presets</title>
+  <!-- Updated app name -->
+  <title>Mark's WeldMind</title>
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#0f172a">
   <style>
@@ -27,7 +28,8 @@
 </head>
 <body>
   <header>
-    <h1>TIG Presets</h1>
+    <!-- Updated header name -->
+    <h1>Mark's WeldMind</h1>
   </header>
   <main>
     <section class="card">
@@ -43,7 +45,9 @@
         </div>
         <div>
           <label for="thickness">Thickness (mm)</label>
-          <input id="thickness" type="number" min="0.3" step="0.1" value="2.0">
+          <!-- Converted to slider with value display -->
+          <input id="thickness" type="range" min="0.3" max="12" step="0.1" value="2.0" oninput="document.getElementById('thicknessValue').textContent = this.value">
+          <span id="thicknessValue">2.0</span>
         </div>
       </div>
       <div class="row3" style="margin-top:12px">
@@ -165,6 +169,7 @@
     <footer>Install from your browser menu to add this app to your home screen. Works offline.</footer>
   </main>
 
+  <!-- Original JavaScript remains unchanged; includes compute logic -->
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js').catch(console.error);
@@ -179,7 +184,6 @@
     const jointFactor = { "Butt": 1.00, "Lap": 1.05, "Fillet": 1.10, "Outside corner": 0.90 };
     const positionFactor = { "Flat": 1.00, "Horizontal": 1.00, "Vertical up": 0.85, "Overhead": 0.80 };
     const tungstenLimit = [ { size: 1.6, maxA: 120 }, { size: 2.4, maxA: 220 }, { size: 3.2, maxA: 320 } ];
-
     function keyFor(material, joint, position, thk) {
       const t = Math.round(thk * 2) / 2;
       return `${material}|${joint}|${position}|${t}`;
@@ -199,7 +203,6 @@
       db[key] = rec;
       localStorage.setItem('tig-learn', JSON.stringify(db));
     }
-
     function loadSettings(){
       const raw = localStorage.getItem('tig-settings') || '{}';
       const s = JSON.parse(raw);
@@ -235,19 +238,15 @@
       }
       return {pct:100, minutes:10};
     }
-
     function limitForTungsten(size) {
       const row = tungstenLimit.find(r => r.size === Number(size)) || tungstenLimit[1];
       return row.maxA;
     }
-
-        function suggestFiller(material, thk, position) {
+    function suggestFiller(material, thk, position) {
       const verticalOrOverhead = (position === "Vertical up" || position === "Overhead");
-
       function adjustDiam(main, small) {
         return verticalOrOverhead ? small : main;
       }
-
       if (material === "Aluminium") {
         if (thk <= 2) {
           const d = adjustDiam("1.2 mm", "1.0–1.2 mm");
@@ -257,7 +256,6 @@
           return "ER5356 " + d;
         }
       }
-
       if (material === "Stainless") {
         if (thk <= 2) {
           const d = adjustDiam("1.0 mm", "0.8–1.0 mm");
@@ -267,7 +265,6 @@
           return "ER308L " + d;
         }
       }
-
       if (material === "Titanium") {
         if (thk <= 1.5) {
           const d = adjustDiam("1.0 mm", "0.8–1.0 mm");
@@ -277,7 +274,6 @@
           return "ERTi-2 " + d;
         }
       }
-
       // Mild steel / default
       if (thk <= 2) {
         const d = adjustDiam("1.0 mm", "0.8–1.0 mm");
@@ -287,83 +283,59 @@
         return "ER70S-2 " + d;
       }
     }
-
-
     function gasFlow(cup, outdoors) {
       const base = (cup <= 6 ? 7 : cup <= 8 ? 9 : 11);
       return outdoors ? base + 3 : base;
     }
-
     function recommendCup(material, thk, joint, position, outdoors) {
       let base;
       if (material === "Aluminium") base = 7;
       else if (material === "Stainless") base = 6;
       else if (material === "Titanium") base = 8;
       else base = 6;
-
       if (thk < 1.5) base -= 1;
       if (thk > 4) base += 1;
-
       if (joint === "Lap" || joint === "Outside corner") base += 1;
-
       if (outdoors) base += 1;
-
       if (material === "Titanium" && base < 8) base = 8;
-
       base = Math.max(4, Math.min(12, base));
       return Math.round(base);
     }
-
     function recommendTungsten(material, amps) {
       if (amps <= 80) return 1.6;
       if (amps <= 180) return 2.4;
       return 3.2;
     }
-
     function recommendGasLens(material, thk, joint, position, outdoors, cup) {
       let use = false;
-
       if (material === "Titanium") use = true;
-
       if (material === "Stainless" && (thk > 2 || cup >= 8 || position !== "Flat" || outdoors)) {
         use = true;
       }
-
       if (material === "Aluminium" && (cup >= 8 || outdoors || position !== "Flat")) {
         use = true;
       }
-
       if (joint === "Outside corner") use = true;
-
       if (!use) return "Not essential (standard cup OK)";
-
       if (material === "Titanium") return "Yes – gas lens + trailing shield strongly recommended";
       if (material === "Stainless") return "Yes – gas lens recommended for cleaner shielding";
       if (material === "Aluminium") return "Yes – gas lens helpful for arc stability";
-
       return "Yes – gas lens recommended";
     }
-
     function recommendACFreq(thk, joint, position) {
       let band;
       if (thk < 1.5) band = "120–150 Hz";
       else if (thk < 3) band = "100–120 Hz";
       else if (thk < 6) band = "80–100 Hz";
       else band = "60–80 Hz";
-
-      const needsTighter = (joint === "Outside corner" ||
-                            position === "Vertical up" ||
-                            position === "Overhead");
-
+      const needsTighter = (joint === "Outside corner" || position === "Vertical up" || position === "Overhead");
       if (needsTighter) {
         if (band === "60–80 Hz") band = "80–100 Hz";
         else if (band === "80–100 Hz") band = "100–120 Hz";
         else if (band === "100–120 Hz") band = "120–150 Hz";
       }
-
       return band;
     }
-
     function recommendMode(material, thk) {
       if (material === "Aluminium") {
         if (thk >= 4) return "AC TIG or MIX TIG (for extra penetration if available)";
@@ -374,20 +346,15 @@
       }
       return "TIG";
     }
-
     function recommendWaveform(material, thk, joint, position) {
       if (material !== "Aluminium") return "N/A (DC)";
-
       let wf = "AC square";
       if (thk < 1.5) wf = "AC soft/sine (smoother arc)";
       if (thk > 5) wf = "AC square (penetration)";
-
       const tricky = (joint === "Outside corner" || position === "Vertical up" || position === "Overhead");
       if (tricky && thk <= 3) wf = "AC soft/sine for smoother control";
-
       return wf;
     }
-
     function recommendArcLength(material, tung) {
       const diam = tung;
       const nominal = diam;
@@ -399,7 +366,6 @@
       }
       return `Aim for ~${nomStr} mm (≈1× dia), keep under ~${maxStr} mm for stable DC arc.`;
     }
-
     function recommendSurfacePrep(material) {
       if (material === "Aluminium") {
         return "Degrease (acetone), stainless brush only for aluminium, remove oxide immediately before welding.";
@@ -412,12 +378,10 @@
       }
       return "Grind to bright metal, remove mill scale and rust; degrease joint area.";
     }
-
     function recommendTravelSpeed(material, thk, position, amps) {
       const thin = thk < 1.5;
       const mid = thk >= 1.5 && thk <= 3;
       const vert = (position === "Vertical up" || position === "Overhead");
-
       if (thin) {
         if (vert) return "Fast, controlled travel; keep the pool small to avoid burn-through.";
         return "Fairly fast stringer beads; avoid dwelling to prevent burn-through.";
@@ -430,60 +394,46 @@
       if (vert) return "Slow, deliberate travel with possible weave; allow puddle to key into the root.";
       return "Slower travel or multi-pass; allow heat to build for full penetration.";
     }
-
     let _current = {suggested:0, adjusted:0, key:''};
-
     function compute() {
       const material = document.getElementById('material').value;
       const thk = Number(document.getElementById('thickness').value);
       const joint = document.getElementById('joint').value;
       const position = document.getElementById('position').value;
       const outdoors = document.getElementById('outdoors').value === "Outdoors";
-
       const settings = loadSettings();
-
       const base = baseAmpPerMm[material] || 35;
       const ampsRaw = Math.round(base * thk * (jointFactor[joint] || 1) * (positionFactor[position] || 1));
-
       const key = keyFor(material, joint, position, thk);
       const bias = getLearnBias(key);
-
       const autoCup = recommendCup(material, thk, joint, position, outdoors);
       document.getElementById('cup').value = autoCup;
-
       const autoTung = recommendTungsten(material, ampsRaw);
       document.getElementById('tungsten').value = autoTung;
-
       const cup = autoCup;
       const tung = autoTung;
-
       let amps = ampsRaw + bias;
-
       const maxAForTung = limitForTungsten(tung);
       let note = "";
       if (amps > maxAForTung) {
         note += `Amps limited by ${tung} mm tungsten. Consider ${tung === 1.6 ? "2.4" : "3.2"} mm.`;
         amps = maxAForTung;
       }
-
       if (amps > settings.maxA) {
         note += (note ? " " : "") + `Limited by machine max ${settings.maxA} A.`;
         amps = settings.maxA;
       }
-
       const gasLensText = recommendGasLens(material, thk, joint, position, outdoors, cup);
       const mode = recommendMode(material, thk);
       const waveform = recommendWaveform(material, thk, joint, position);
       const arcLength = recommendArcLength(material, tung);
       const surfacePrep = recommendSurfacePrep(material);
       const travel = recommendTravelSpeed(material, thk, position, amps);
-
       let preflow = 0.5;
       let postflow = Math.max(6, Math.round(amps / 10));
       let slopeUp = 0.3, slopeDown = 0.7;
       if (material === "Titanium") { postflow = Math.max(15, Math.round(amps / 6)); }
       if (material === "Aluminium") { preflow = 0.7; slopeUp = 0.4; slopeDown = 1.0; }
-
       let polarity = "DCEN", acBalance = "—", acFreq = "—", pulse = "Off";
       if (material === "Aluminium") {
         polarity = "AC";
@@ -495,17 +445,14 @@
       } else if (material === "Mild steel") {
         pulse = thk <= 1.5 ? "1 Hz, peak 40%, back 30%, duty 40%" : "Off";
       }
-
       const pts = parseDutyPoints(settings.dutyPts);
       const d = interpDuty(amps, pts);
       const dutyStr = `${d.pct}% (~${d.minutes.toFixed(1)} min per 10 min)`;
-
       const gas = gasFlow(cup, outdoors);
       const filler = suggestFiller(material, thk, position);
       if (material === "Titanium") {
         note = (note ? note + " " : "") + "Use gas lens, trailing shield; back-purge closed volumes; post-flow ≥ 15 s.";
       }
-
       const res = {
         mode,
         gasLens: gasLensText,
@@ -527,13 +474,11 @@
         surfacePrep,
         notes: note || "Keep arc short, watch puddle wetting and adjust travel accordingly."
       };
-
       renderResult(res);
       _current.suggested = amps; _current.adjusted = amps; _current.key = key;
       const lp = document.getElementById('learn'); lp.textContent = `Learned: ${bias} A`;
       return {input:{material,thk,joint,position,outdoors,cup,tung}, output:res, ts:Date.now()};
     }
-
     function renderResult(r) {
       const el = document.getElementById('result');
       el.innerHTML = [
@@ -557,7 +502,6 @@
       document.getElementById('hint').textContent = 'Calculated';
       document.getElementById('hint').classList.add('ok');
     }
-
     function loadPresets() {
       const raw = localStorage.getItem('tig-presets') || '[]';
       const list = JSON.parse(raw);
@@ -583,7 +527,6 @@
         wrap.appendChild(div);
       });
     }
-
     function exportData(){
       const data = {
         presets: JSON.parse(localStorage.getItem('tig-presets') || '[]'),
@@ -610,7 +553,6 @@
       };
       r.readAsText(file);
     }
-
     function setDisplayedAmps(val){
       const el = document.getElementById('result');
       const rows = el.querySelectorAll('div');
@@ -620,14 +562,13 @@
         if (v) v.textContent = `${val} A`;
       }
     }
-
     document.getElementById('calc').addEventListener('click', compute);
     document.getElementById('minus5').addEventListener('click', () => { _current.adjusted = Math.max(0, _current.adjusted - 5); setDisplayedAmps(_current.adjusted); document.getElementById('hint').textContent = '-5 A'; });
     document.getElementById('plus5').addEventListener('click', () => { _current.adjusted = _current.adjusted + 5; setDisplayedAmps(_current.adjusted); document.getElementById('hint').textContent = '+5 A'; });
     document.getElementById('good').addEventListener('click', () => {
       const delta = _current.adjusted - _current.suggested;
       updateLearn(_current.key, delta);
-      document.getElementById('hint').textContent = `Learned ${delta >=0? '+':''}${delta} A`;
+      document.getElementById('hint').textContent = `Learned ${delta >=0? '+' : ''}${delta} A`;
       compute();
     });
     document.getElementById('save').addEventListener('click', () => {
@@ -643,13 +584,11 @@
     document.getElementById('exportData').addEventListener('click', exportData);
     document.getElementById('importData').addEventListener('click', () => document.getElementById('importFile').click());
     document.getElementById('importFile').addEventListener('change', (e) => { const f = e.target.files[0]; if (f) importData(f); });
-
     document.getElementById('toggleHelp').addEventListener('click', () => {
       const h = document.getElementById('help');
       const visible = h.style.display !== 'none';
       h.style.display = visible ? 'none' : 'block';
     });
-
     loadPresets();
     loadSettings();
     compute();
